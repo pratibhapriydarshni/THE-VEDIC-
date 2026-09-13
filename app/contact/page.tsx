@@ -1,0 +1,2 @@
+import SiteNav from '@/components/site-nav'; import SiteFooter from '@/components/site-footer';
+export default function Page(){return <><SiteNav/><main className="wrap"><div className="card"><h1>contact</h1><p className="muted">THE VEDIC ASTRO · Pt. Deepak Acharya</p><p>This page is part of the production website foundation. Content can be managed through the admin system.</p><a className="cta" href="/book">Book Consultation</a></div></main><SiteFooter/></>}

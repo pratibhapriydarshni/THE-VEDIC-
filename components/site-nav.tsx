@@ -1,0 +1,1 @@
+export default function SiteNav(){return <nav className="nav"><a className="brand" href="/">THE VEDIC ASTRO</a><div className="links"><a href="/about">About</a><a href="/services">Services</a><a href="/astrology">Astrology</a><a href="/faq">FAQ</a><a href="/contact">Contact</a><a href="/login">Login</a><a className="cta" href="/book">Book Consultation</a></div></nav>}
