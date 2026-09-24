@@ -2147,3 +2147,110 @@ button {
     min-width: 220px;
   }
 }
+/* Booking page */
+.bookingPage {
+  padding-top: 32px;
+  padding-bottom: 48px;
+}
+
+.bookingPage .form {
+  margin: 0 auto;
+  padding: 28px;
+  background: #fffdf8;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(67, 16, 24, 0.06);
+}
+
+.bookingPage h1 {
+  margin: 0 0 12px;
+  color: var(--maroon);
+  font-family: Georgia, serif;
+  font-size: clamp(28px, 5vw, 38px);
+  line-height: 1.2;
+}
+
+.bookingPage .muted {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.bookingPage .form label {
+  margin-top: 20px;
+}
+
+.bookingPage .form input,
+.bookingPage .form select,
+.bookingPage .form textarea {
+  margin-top: 7px;
+  min-width: 0;
+  color: var(--ink);
+}
+
+.bookingPage .form textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.bookingPage .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+  gap: 10px;
+  margin: 16px 0 24px;
+}
+
+.bookingPage .grid button {
+  min-height: 46px;
+  padding: 10px 6px;
+  border: 1px solid #b99c76;
+  border-radius: 8px;
+  background: white;
+  color: var(--maroon);
+  font-size: 14px;
+}
+
+.bookingPage .grid button:hover {
+  background: var(--cream-dark);
+}
+
+.bookingPage .grid button.selected {
+  background: var(--maroon);
+  border-color: var(--maroon);
+  color: white;
+  box-shadow: 0 0 0 2px var(--gold);
+}
+
+.bookingPage :is(input, select, textarea, button):focus-visible {
+  outline: 3px solid var(--saffron);
+  outline-offset: 3px;
+}
+
+.bookingPage .cta {
+  width: 100%;
+  margin-top: 20px;
+  min-height: 48px;
+}
+
+.bookingPage .cta:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.bookingPage [role="alert"] {
+  padding: 12px;
+  border: 1px solid #e3a99b;
+  border-radius: 8px;
+  background: #fff0ed;
+  color: #7a1825;
+}
+
+@media (max-width: 520px) {
+  .bookingPage {
+    padding-top: 20px;
+  }
+
+  .bookingPage .form {
+    padding: 18px 14px;
+  }
+}
