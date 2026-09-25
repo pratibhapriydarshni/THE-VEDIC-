@@ -1,47 +1,502 @@
 'use client';
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+
+import { useEffect, useState } from 'react';
 import SiteNav from '@/components/site-nav';
 import SiteFooter from '@/components/site-footer';
 import { supabaseBrowser } from '@/lib/supabase-browser';
 
-type Service={id:string;name:string;duration_minutes:number;price_inr:number;price_usd:number};
+type Service = {
+  id: string;
+  name: string;
+  price_inr: number;
+  price_usd: number;
+  duration_minutes: number;
+};
 
-declare global { interface Window { Razorpay:any } }
+export default function BookPage() {
+  const [services, setServices] = useState<Service[]>([]);
+  const [serviceId, setServiceId] = useState('');
+  const [language, setLanguage] = useState<'Hindi' | 'English'>('Hindi');
+  const [mode, setMode] = useState<'Chat' | 'Audio' | 'Video'>('Video');
+  const [date, setDate] = useState('');
+  const [slots, setSlots] = useState<string[]>([]);
+  const [startAt, setStartAt] = useState('');
 
-export default function Book(){
- const router=useRouter();
- const [services,setServices]=useState<Service[]>([]); const [serviceId,setServiceId]=useState('');
- const [language,setLanguage]=useState('English'); const [mode,setMode]=useState('Chat'); const [date,setDate]=useState(''); const [slots,setSlots]=useState<string[]>([]); const [slot,setSlot]=useState('');
- const [form,setForm]=useState({name:'',phone:'',email:'',dob:'',tob:'',pob:'',current_place:'',purpose:''});
- const [error,setError]=useState(''); const [busy,setBusy]=useState(false);
- const service=useMemo(()=>services.find(s=>s.id===serviceId),[services,serviceId]);
- useEffect(()=>{fetch('/api/services').then(r=>r.json()).then(j=>{const x=j.services||[];setServices(x);if(x[0])setServiceId(x[0].id)}).catch(()=>setError('Unable to load services.'));},[]);
- useEffect(()=>{if(!date||!serviceId)return;setSlot('');fetch(`/api/booking/slots?date=${date}&service_id=${serviceId}`).then(r=>r.json()).then(j=>setSlots(j.slots||[])).catch(()=>setSlots([]));},[date,serviceId]);
- useEffect(()=>{(async()=>{const {data:{session}}=await supabaseBrowser().auth.getSession(); if(session?.user){setForm(f=>({...f,email:session.user.email||f.email,name:(session.user.user_metadata?.full_name||f.name),phone:(session.user.user_metadata?.phone||f.phone)}));}})();},[]);
- function set(k:string,v:string){setForm(f=>({...f,[k]:v}));}
- async function submit(e:FormEvent){e.preventDefault();setError('');if(!service||!slot){setError('Please select a service and time slot.');return;}setBusy(true);
-   const sb=supabaseBrowser(); const {data:{session}}=await sb.auth.getSession(); if(!session){router.push('/login?next=/book');return;}
-   try{
-    const bres=await fetch('/api/booking/create',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({...form,service_id:service.id,language,mode,start_at:slot})});
-    const bj=await bres.json(); if(!bres.ok) throw new Error(bj.error||'Could not create booking.');
-    const ores=await fetch('/api/payments/razorpay/order',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({booking_id:bj.booking.id})});
-    const oj=await ores.json(); if(!ores.ok) throw new Error(oj.error||'Could not start payment.');
-    if(!window.Razorpay) throw new Error('Payment checkout is unavailable. Please try again.');
-    const rz=new window.Razorpay({key:oj.key_id,order_id:oj.order_id,amount:oj.amount,currency:oj.currency,name:'THE VEDIC ASTRO',description:`${service.name} consultation`,prefill:{name:form.name,email:form.email,contact:form.phone},handler:async (response:any)=>{
-      const vr=await fetch('/api/payments/razorpay/verify',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({booking_id:bj.booking.id,...response})});
-      const vj=await vr.json(); if(!vr.ok){setError(vj.error||'Payment verification failed.');setBusy(false);return;} router.replace('/dashboard');
-    },modal:{ondismiss:()=>setBusy(false)}}); rz.open();
-   }catch(err){setError(err instanceof Error?err.message:'Something went wrong.');setBusy(false);}
- }
- return <><SiteNav/><main className="wrap bookingPage"><form className="form card" onSubmit={submit}><h1>Book Consultation</h1><p className="muted">Service → Language → Mode → Date & Time → Payment → Confirmation</p>
- <label>Service<select value={serviceId} onChange={e=>setServiceId(e.target.value)}>{services.map(s=><option key={s.id} value={s.id}>{s.name} · {s.duration_minutes} min · ₹{s.price_inr}</option>)}</select></label>
- <label>Language<select value={language} onChange={e=>setLanguage(e.target.value)}><option>English</option><option>Hindi</option></select></label>
- <label>Mode<select value={mode} onChange={e=>setMode(e.target.value)}><option>Chat</option><option>Audio</option><option>Video</option></select></label>
- <label>Date<input type="date" value={date} onChange={e=>setDate(e.target.value)} required/></label>
- {date&&<><p className="muted">Available times (India time)</p><div className="grid">{slots.map(s=><button type="button" className={`card ${slot===s?'selected':''}`} key={s} onClick={()=>setSlot(s)}><b>{new Date(s).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</b></button>)}</div></>}
- <label>Full name<input value={form.name} onChange={e=>set('name',e.target.value)} required/></label><label>Phone<input value={form.phone} onChange={e=>set('phone',e.target.value)} required/></label><label>Email<input type="email" value={form.email} onChange={e=>set('email',e.target.value)} required/></label>
- <label>Date of birth<input type="date" value={form.dob} onChange={e=>set('dob',e.target.value)} placeholder="DD/MM/YYYY"/></label><label>Time of birth<input type="time" value={form.tob} onChange={e=>set('tob',e.target.value)} placeholder="HH:MM"/></label><label>Place of birth<input value={form.pob} onChange={e=>set('pob',e.target.value)}/></label><label>Current place<input value={form.current_place} onChange={e=>set('current_place',e.target.value)}/></label><label>Purpose<textarea value={form.purpose} onChange={e=>set('purpose',e.target.value)} maxLength={2000}/></label>
- {service&&<p><b>Pay ₹{service.price_inr}</b> · {service.duration_minutes} minutes</p>}{error&&<p role="alert">{error}</p>}<button className="cta" disabled={busy||!slot}>{busy?'Processing…':'Continue to Secure Payment'}</button><p className="muted">Full payment is required to confirm your consultation.</p>
- </form></main><SiteFooter/><script src="https://checkout.razorpay.com/v1/checkout.js" async /></>;
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [dob, setDob] = useState('');
+  const [tob, setTob] = useState('');
+  const [pob, setPob] = useState('');
+  const [currentPlace, setCurrentPlace] = useState('');
+  const [purpose, setPurpose] = useState('');
+
+  const [bookingId, setBookingId] = useState('');
+  const [utr, setUtr] = useState('');
+  const [paymentStep, setPaymentStep] = useState(false);
+  const [verificationPending, setVerificationPending] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const selectedService =
+    services.find((service) => service.id === serviceId) || null;
+
+  useEffect(() => {
+    fetch('/api/services')
+      .then((res) => res.json())
+      .then((data) => {
+        setServices(data.services || []);
+      })
+      .catch(() => {
+        setMessage('Unable to load services.');
+      });
+  }, []);
+
+  useEffect(() => {
+    setStartAt('');
+    setSlots([]);
+
+    if (!date || !serviceId) return;
+
+    fetch(
+      `/api/booking/slots?date=${encodeURIComponent(
+        date
+      )}&service_id=${encodeURIComponent(serviceId)}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        setSlots(data.slots || []);
+      })
+      .catch(() => {
+        setMessage('Unable to load available slots.');
+      });
+  }, [date, serviceId]);
+
+  async function getSession() {
+    const sb = supabaseBrowser();
+    const {
+      data: { session },
+    } = await sb.auth.getSession();
+
+    return session;
+  }
+
+  async function createBooking(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage('');
+
+    if (!serviceId || !startAt) {
+      setMessage('Please select service, date and time.');
+      return;
+    }
+
+    const session = await getSession();
+
+    if (!session) {
+      window.location.href = '/login?next=/book';
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/booking/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          service_id: serviceId,
+          language,
+          mode,
+          start_at: startAt,
+          name,
+          phone,
+          email,
+          dob: dob || undefined,
+          tob: tob || undefined,
+          pob: pob || undefined,
+          current_place: currentPlace || undefined,
+          purpose: purpose || undefined,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage(data.error || 'Booking could not be created.');
+        return;
+      }
+
+      setBookingId(data.booking.id);
+      setPaymentStep(true);
+
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth',
+      });
+    } catch {
+      setMessage('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function submitUtr(e: React.FormEvent) {
+    e.preventDefault();
+    setMessage('');
+
+    const cleanUtr = utr.trim();
+
+    if (cleanUtr.length < 6) {
+      setMessage('Please enter a valid UTR / transaction reference.');
+      return;
+    }
+
+    const session = await getSession();
+
+    if (!session) {
+      window.location.href = '/login?next=/book';
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/payments/upi/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          booking_id: bookingId,
+          utr: cleanUtr,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (data.error === 'UTR_ALREADY_USED') {
+          setMessage(
+            'This UTR has already been submitted for another booking.'
+          );
+        } else {
+          setMessage(data.error || 'Unable to submit payment details.');
+        }
+        return;
+      }
+
+      setVerificationPending(true);
+    } catch {
+      setMessage('Unable to submit payment details. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (verificationPending) {
+    return (
+      <>
+        <SiteNav />
+
+        <main className="wrap">
+          <div className="card">
+            <h1>Payment Verification Pending</h1>
+
+            <p>
+              Your payment details have been submitted successfully.
+            </p>
+
+            <p>
+              Your booking will be confirmed after the payment is verified.
+            </p>
+
+            <a className="cta" href="/dashboard">
+              View Dashboard
+            </a>
+          </div>
+        </main>
+
+        <SiteFooter />
+      </>
+    );
+  }
+
+  if (paymentStep) {
+    return (
+      <>
+        <SiteNav />
+
+        <main className="wrap">
+          <div className="card">
+            <h1>Complete Payment</h1>
+
+            {selectedService && (
+              <>
+                <h2>{selectedService.name}</h2>
+
+                <p>
+                  Amount to Pay:{' '}
+                  <strong>₹{Number(selectedService.price_inr)}</strong>
+                </p>
+              </>
+            )}
+
+            <p>Scan the QR code below using your UPI app.</p>
+
+            <div
+              style={{
+                textAlign: 'center',
+                margin: '24px 0',
+              }}
+            >
+              <img
+                src="/upi-payment-qr.png"
+                alt="THE VEDIC ASTRO UPI payment QR code"
+                style={{
+                  width: '100%',
+                  maxWidth: '320px',
+                  height: 'auto',
+                  borderRadius: '12px',
+                }}
+              />
+            </div>
+
+            <p>
+              UPI ID:{' '}
+              <strong>thevedicastroindia@ybl</strong>
+            </p>
+
+            <p>
+              Please pay the exact amount shown above. After payment,
+              enter the UTR / transaction reference below.
+            </p>
+
+            <form onSubmit={submitUtr}>
+              <label>
+                UTR / Transaction Reference
+                <input
+                  value={utr}
+                  onChange={(e) => setUtr(e.target.value)}
+                  placeholder="Enter payment UTR"
+                  required
+                  minLength={6}
+                  maxLength={50}
+                  autoComplete="off"
+                />
+              </label>
+
+              {message && <p>{message}</p>}
+
+              <button
+                className="cta"
+                type="submit"
+                disabled={loading}
+              >
+                {loading
+                  ? 'Submitting...'
+                  : 'Submit Payment for Verification'}
+              </button>
+            </form>
+
+            <p style={{ marginTop: '20px' }}>
+              Do not submit payment details unless you have completed
+              the payment.
+            </p>
+          </div>
+        </main>
+
+        <SiteFooter />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <SiteNav />
+
+      <main className="wrap">
+        <h1>Book Consultation</h1>
+
+        <form className="card" onSubmit={createBooking}>
+          <label>
+            Service
+            <select
+              value={serviceId}
+              onChange={(e) => setServiceId(e.target.value)}
+              required
+            >
+              <option value="">Select Service</option>
+
+              {services.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name} — ₹{service.price_inr} /{' '}
+                  {service.duration_minutes} min
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            Language
+            <select
+              value={language}
+              onChange={(e) =>
+                setLanguage(e.target.value as 'Hindi' | 'English')
+              }
+            >
+              <option value="Hindi">Hindi</option>
+              <option value="English">English</option>
+            </select>
+          </label>
+
+          <label>
+            Consultation Mode
+            <select
+              value={mode}
+              onChange={(e) =>
+                setMode(
+                  e.target.value as 'Chat' | 'Audio' | 'Video'
+                )
+              }
+            >
+              <option value="Chat">Chat</option>
+              <option value="Audio">Audio</option>
+              <option value="Video">Video</option>
+            </select>
+          </label>
+
+          <label>
+            Date
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
+          </label>
+
+          <label>
+            Available Time
+            <select
+              value={startAt}
+              onChange={(e) => setStartAt(e.target.value)}
+              required
+              disabled={!slots.length}
+            >
+              <option value="">
+                {slots.length
+                  ? 'Select Time'
+                  : 'Select service and date first'}
+              </option>
+
+              {slots.map((slot) => (
+                <option key={slot} value={slot}>
+                  {new Date(slot).toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZone: 'Asia/Kolkata',
+                  })}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <h2>Your Details</h2>
+
+          <label>
+            Name
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              minLength={2}
+            />
+          </label>
+
+          <label>
+            Phone
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
+          </label>
+
+          <label>
+            Email
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </label>
+
+          <label>
+            Date of Birth
+            <input
+              value={dob}
+              onChange={(e) => setDob(e.target.value)}
+              placeholder="Optional"
+            />
+          </label>
+
+          <label>
+            Time of Birth
+            <input
+              value={tob}
+              onChange={(e) => setTob(e.target.value)}
+              placeholder="Optional"
+            />
+          </label>
+
+          <label>
+            Place of Birth
+            <input
+              value={pob}
+              onChange={(e) => setPob(e.target.value)}
+              placeholder="Optional"
+            />
+          </label>
+
+          <label>
+            Current Place
+            <input
+              value={currentPlace}
+              onChange={(e) => setCurrentPlace(e.target.value)}
+              placeholder="Optional"
+            />
+          </label>
+
+          <label>
+            Purpose / Question
+            <textarea
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              placeholder="Tell us what you would like guidance about"
+            />
+          </label>
+
+          {message && <p>{message}</p>}
+
+          <button
+            className="cta"
+            type="submit"
+            disabled={loading}
+          >
+            {loading
+              ? 'Creating Booking...'
+              : 'Continue to Payment'}
+          </button>
+        </form>
+      </main>
+
+      <SiteFooter />
+    </>
+  );
 }
