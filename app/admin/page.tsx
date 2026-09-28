@@ -65,7 +65,13 @@ type ContentItem = {
   value_en: string;
   published: boolean;
 };
-
+type ConsultationFile = {
+  id: string;
+  booking_id: string;
+  file_name: string;
+  mime_type: string;
+  created_at: string;
+};
 type Certificate = {
   id: string;
   title: string;
@@ -115,6 +121,11 @@ export default function AdminManagement() {
   const [content, setContent] = useState<ContentItem[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [workingId, setWorkingId] = useState<string | null>(null);
+const [bookingFiles, setBookingFiles] = useState<
+  Record<string, ConsultationFile[]>
+>({});
+
+const [filesLoadingId, setFilesLoadingId] = useState<string | null>(null);
 
   async function token() {
     const {
@@ -364,7 +375,44 @@ export default function AdminManagement() {
       );
     }
   }
+async function loadBookingFiles(bookingId: string) {
+  setFilesLoadingId(bookingId);
 
+  try {
+    const data = await api(
+      `/api/consultation/files?bookingId=${encodeURIComponent(bookingId)}`
+    );
+
+    setBookingFiles((prev) => ({
+      ...prev,
+      [bookingId]: data.files || [],
+    }));
+  } catch (e) {
+    setMessage(
+      e instanceof Error ? e.message : 'Unable to load uploaded files.'
+    );
+  } finally {
+    setFilesLoadingId(null);
+  }
+}
+
+async function openBookingFile(fileId: string) {
+  try {
+    const data = await api(
+      `/api/consultation/files/${encodeURIComponent(fileId)}`
+    );
+
+    if (!data.url) {
+      throw new Error('File link unavailable.');
+    }
+
+    window.open(data.url, '_blank', 'noopener,noreferrer');
+  } catch (e) {
+    setMessage(
+      e instanceof Error ? e.message : 'Unable to open file.'
+    );
+  }
+}
   async function logout() {
     await supabaseBrowser().auth.signOut();
     window.location.href = '/login';
@@ -611,11 +659,91 @@ export default function AdminManagement() {
                             </button>
                           )}
                         </div>
+                          
+
+                        {/* UPLOADED FILES START */}
+                        <div
+                          style={{
+                            marginTop: 18,
+                            paddingTop: 16,
+                            borderTop: '1px solid #ead9b8',
+                          }}
+                        >
+                          <strong>Uploaded Files</strong>
+
+                          <div style={{ marginTop: 10 }}>
+                            <button
+                              style={buttonStyle}
+                              disabled={filesLoadingId === b.id}
+                              onClick={() => loadBookingFiles(b.id)}
+                            >
+                              {filesLoadingId === b.id
+                                ? 'Loading...'
+                                : bookingFiles[b.id]
+                                ? 'Refresh Files'
+                                : 'View Uploaded Files'}
+                            </button>
+                          </div>
+
+                          {bookingFiles[b.id] && (
+                            <div
+                              style={{
+                                display: 'grid',
+                                gap: 8,
+                                marginTop: 12,
+                              }}
+                            >
+                              {bookingFiles[b.id].length === 0 ? (
+                                <p style={{ margin: 0 }}>
+                                  No files uploaded by this customer.
+                                </p>
+                              ) : (
+                                bookingFiles[b.id].map((file) => (
+                                  <div
+                                    key={file.id}
+                                    style={{
+                                      padding: 12,
+                                      border: '1px solid #ead9b8',
+                                      borderRadius: 8,
+                                      background: '#fffaf1',
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        wordBreak: 'break-word',
+                                        marginBottom: 8,
+                                      }}
+                                    >
+                                      <strong>{file.file_name}</strong>
+                                    </div>
+
+                                    <small>{file.mime_type}</small>
+
+                                    <div style={{ marginTop: 10 }}>
+                                      <button
+                                        style={buttonStyle}
+                                        onClick={() =>
+                                          openBookingFile(file.id)
+                                        }
+                                      >
+                                        View / Download
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {/* UPLOADED FILES END */}
+
                       </div>
                     ))}
                   </div>
                 </>
               )}
+
+  
 
               {tab === 'payments' && (
                 <>
