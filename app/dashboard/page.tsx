@@ -10,6 +10,8 @@ export default function Dashboard() {
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<Record<string, string>>({});
 
   useEffect(() => {
     (async () => {
@@ -49,6 +51,53 @@ export default function Dashboard() {
     })();
   }, []);
 
+  async function uploadFile(bookingId: string, file: File) {
+    setUploadingId(bookingId);
+    setUploadMessage((prev) => ({ ...prev, [bookingId]: '' }));
+
+    try {
+      const sb = supabaseBrowser();
+
+      const {
+        data: { session },
+      } = await sb.auth.getSession();
+
+      if (!session) {
+        throw new Error('Please sign in again.');
+      }
+
+      const form = new FormData();
+      form.append('bookingId', bookingId);
+      form.append('file', file);
+
+      const response = await fetch('/api/consultation/files', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: form,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'File upload failed.');
+      }
+
+      setUploadMessage((prev) => ({
+        ...prev,
+        [bookingId]: 'File uploaded successfully.',
+      }));
+    } catch (e: any) {
+      setUploadMessage((prev) => ({
+        ...prev,
+        [bookingId]: e.message || 'File upload failed.',
+      }));
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
   return (
     <>
       <SiteNav />
@@ -73,47 +122,97 @@ export default function Dashboard() {
               <p>Loading...</p>
             ) : bookings.length ? (
               <div>
-                {bookings.map((b) => (
-                  <div
-                    key={b.id}
-                    style={{
-                      padding: '14px 0',
-                      borderBottom: '1px solid #ddd',
-                    }}
-                  >
-                    <strong>
-                      {b.services?.name || 'Consultation'}
-                    </strong>
+                {bookings.map((b) => {
+                  const canUpload =
+                    b.status === 'confirmed' &&
+                    b.payment_status === 'paid';
 
-                    <p>
-                      {new Date(b.start_at).toLocaleString()}
-                    </p>
-
-                    <p>Mode: {b.mode}</p>
-
-                    <p>
-                      Booking Status:{' '}
+                  return (
+                    <div
+                      key={b.id}
+                      style={{
+                        padding: '18px 0',
+                        borderBottom: '1px solid #ddd',
+                      }}
+                    >
                       <strong>
-                        {b.status === 'cancelled'
-                          ? 'Cancelled'
-                          : b.status === 'confirmed'
-                          ? 'Confirmed'
-                          : b.status === 'blocked'
-                          ? 'Blocked'
-                          : 'Pending'}
+                        {b.services?.name || 'Consultation'}
                       </strong>
-                    </p>
 
-                    <p>
-                      Payment Status:{' '}
-                      <strong>
-                        {b.payment_status === 'paid'
-                          ? 'Paid'
-                          : b.payment_status || 'Pending'}
-                      </strong>
-                    </p>
-                  </div>
-                ))}
+                      <p>{new Date(b.start_at).toLocaleString()}</p>
+
+                      <p>Mode: {b.mode}</p>
+
+                      <p>
+                        Booking Status:{' '}
+                        <strong>
+                          {b.status === 'cancelled'
+                            ? 'Cancelled'
+                            : b.status === 'confirmed'
+                            ? 'Confirmed'
+                            : b.status === 'blocked'
+                            ? 'Blocked'
+                            : 'Pending'}
+                        </strong>
+                      </p>
+
+                      <p>
+                        Payment Status:{' '}
+                        <strong>
+                          {b.payment_status === 'paid'
+                            ? 'Paid'
+                            : b.payment_status || 'Pending'}
+                        </strong>
+                      </p>
+
+                      {canUpload && (
+                        <div style={{ marginTop: '14px' }}>
+                          <strong>Upload Consultation Files</strong>
+
+                          <p className="muted">
+                            Upload palm images, Kundli, reports or other
+                            relevant documents. JPG, PNG, WEBP or PDF only.
+                            Maximum 10 MB per file.
+                          </p>
+
+                          <label
+                            className="cta"
+                            style={{
+                              display: 'inline-block',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {uploadingId === b.id
+                              ? 'Uploading...'
+                              : 'Upload Files'}
+
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp,application/pdf"
+                              disabled={uploadingId === b.id}
+                              style={{ display: 'none' }}
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+
+                                if (file) {
+                                  uploadFile(b.id, file);
+                                }
+
+                                e.currentTarget.value = '';
+                              }}
+                            />
+                          </label>
+
+                          {uploadMessage[b.id] && (
+                            <p style={{ marginTop: '10px' }}>
+                              {uploadMessage[b.id]}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <p>No bookings yet.</p>
