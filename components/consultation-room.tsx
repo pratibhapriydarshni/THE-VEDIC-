@@ -6,9 +6,11 @@ import { Room, RoomEvent, Track, RemoteTrack, LocalTrackPublication } from 'live
 
 type Message = { id: string; booking_id: string; sender_id: string; message: string; created_at: string; message_type?: string };
 
-type Props = { bookingId: string; accessToken: string; currentUserId?: string };
+type Props = { bookingId: string };
 
-export default function ConsultationRoom({ bookingId, accessToken, currentUserId }: Props) {
+export default function ConsultationRoom({ bookingId }: Props) {
+  const [accessToken, setAccessToken] = useState('');
+  const [currentUserId, setCurrentUserId] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [text, setText] = useState('');
   const [roomToken, setRoomToken] = useState('');
@@ -24,8 +26,34 @@ export default function ConsultationRoom({ bookingId, accessToken, currentUserId
   const roomRef = useRef<Room | null>(null);
   const videoRef = useRef<HTMLDivElement>(null);
   const supabaseRef = useRef(createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!));
+useEffect(() => {
+  let active = true;
 
+  (async () => {
+    const supabase = supabaseRef.current;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!active) return;
+
+    if (!session?.access_token || !session.user) {
+      setError('Please log in to join this consultation.');
+      setLoading(false);
+      return;
+    }
+
+    setAccessToken(session.access_token);
+    setCurrentUserId(session.user.id);
+  })();
+
+  return () => {
+    active = false;
+  };
+}, []);
   useEffect(() => {
+if (!accessToken) return;
     let cancelled = false;
     const supabase = supabaseRef.current;
     const channel = supabase.channel(`consultation:${bookingId}`).on('postgres_changes', {
