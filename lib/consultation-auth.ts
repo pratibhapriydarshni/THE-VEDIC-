@@ -1,11 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import { adminDb } from './supabase';
 
-export async function authorizeBooking(req: Request, bookingId: string) {
+export async function authorizeBooking(
+  req: Request,
+  bookingId: string
+) {
   const h = req.headers.get('authorization') || '';
   const token = h.startsWith('Bearer ') ? h.slice(7) : '';
 
-  if (!token) throw new Error('AUTH_REQUIRED');
+  if (!token) {
+    throw new Error('AUTH_REQUIRED');
+  }
 
   const userDb = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,11 +21,15 @@ export async function authorizeBooking(req: Request, bookingId: string) {
     data: { user },
   } = await userDb.auth.getUser(token);
 
-  if (!user) throw new Error('AUTH_REQUIRED');
+  if (!user) {
+    throw new Error('AUTH_REQUIRED');
+  }
 
   const { data: booking, error: bookingError } = await adminDb
     .from('bookings')
-    .select('id,customer_id,status,payment_status,start_at,duration_minutes')
+    .select(
+      'id,customer_id,status,payment_status,start_at,duration_minutes,mode'
+    )
     .eq('id', bookingId)
     .maybeSingle();
 

@@ -164,7 +164,21 @@ export default function Dashboard() {
                             : b.payment_status || 'Pending'}
                         </strong>
                       </p>
+{canUpload && (
+  <div style={{ marginTop: '14px', marginBottom: '14px' }}>
+    <a
+      className="cta"
+      href={`/consultation/${b.id}`}
+      style={{ display: 'inline-block' }}
+    >
+      Join Consultation
+    </a>
 
+    <p className="muted" style={{ marginTop: '8px' }}>
+      Open your private {b.mode || 'consultation'} consultation room.
+    </p>
+  </div>
+)}
                       {canUpload && (
                         <div style={{ marginTop: '14px' }}>
                           <strong>Upload Consultation Files</strong>
