@@ -132,8 +132,25 @@ export default function ConsultationRoom({ bookingId }: Props) {
         }
 
         if (!cancelled) {
-          setMessages(historyJson.messages || []);
-        }
+  const historyMessages: Message[] =
+    historyJson.messages || [];
+
+  setMessages((current) => {
+    const merged = [...historyMessages];
+
+    for (const message of current) {
+      if (!merged.some((m) => m.id === message.id)) {
+        merged.push(message);
+      }
+    }
+
+    return merged.sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() -
+        new Date(b.created_at).getTime()
+    );
+  });
+}
 
         const fileResponse = await fetch(
           `/api/consultation/files?bookingId=${encodeURIComponent(
