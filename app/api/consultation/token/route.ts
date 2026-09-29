@@ -8,12 +8,40 @@ export async function POST(req: Request) {
 
     const a = await authorizeBooking(req, bookingId);
 
-    const identity = a.user.id;
+    const mode = String(a.booking.mode || 'chat').toLowerCase();
     const room = `consultation-${bookingId}`;
 
+    // Chat consultation does not need LiveKit.
+    if (mode === 'chat') {
+      return NextResponse.json({
+        token: '',
+        room,
+        url: '',
+        mode: 'chat',
+      });
+    }
+
+    // Audio and Video consultations require LiveKit.
+    const apiKey = process.env.LIVEKIT_API_KEY;
+    const apiSecret = process.env.LIVEKIT_API_SECRET;
+    const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+
+    if (!apiKey || !apiSecret || !livekitUrl) {
+      return NextResponse.json(
+        {
+          error: 'LIVEKIT_NOT_CONFIGURED',
+        },
+        {
+          status: 500,
+        }
+      );
+    }
+
+    const identity = a.user.id;
+
     const token = new AccessToken(
-      process.env.LIVEKIT_API_KEY,
-      process.env.LIVEKIT_API_SECRET,
+      apiKey,
+      apiSecret,
       {
         identity,
         name: a.user.email || identity,
@@ -31,8 +59,8 @@ export async function POST(req: Request) {
     return NextResponse.json({
       token: await token.toJwt(),
       room,
-      url: process.env.NEXT_PUBLIC_LIVEKIT_URL,
-      mode: a.booking.mode,
+      url: livekitUrl,
+      mode,
     });
   } catch (e: any) {
     return NextResponse.json(
