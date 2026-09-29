@@ -109,6 +109,49 @@ export default function ConsultationRoom({ bookingId }: Props) {
         }
       )
       .subscribe();
+const syncMessages = async () => {
+  try {
+    const response = await fetch(
+      `/api/consultation/messages?bookingId=${encodeURIComponent(
+        bookingId
+      )}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const incoming: Message[] = data.messages || [];
+
+    setMessages((current) => {
+      const merged = [...current];
+
+      for (const message of incoming) {
+        if (!merged.some((m) => m.id === message.id)) {
+          merged.push(message);
+        }
+      }
+
+      return merged.sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() -
+          new Date(b.created_at).getTime()
+      );
+    });
+  } catch {
+    // Realtime remains primary; next sync will retry.
+  }
+};
+
+const messageSyncInterval = window.setInterval(
+  syncMessages,
+  3000
+);
 
     (async () => {
       try {
@@ -218,6 +261,7 @@ export default function ConsultationRoom({ bookingId }: Props) {
 
     return () => {
       cancelled = true;
+      window.clearInterval(messageSyncInterval);
       supabase.removeChannel(channel);
       roomRef.current?.disconnect();
       roomRef.current = null;
@@ -269,13 +313,18 @@ export default function ConsultationRoom({ bookingId }: Props) {
     );
 
     room.on(
-      RoomEvent.LocalTrackPublished,
-      (publication: LocalTrackPublication) => {
-        if (publication.track) {
-          attachTrack(publication.track);
-        }
-      }
-    );
+  RoomEvent.LocalTrackPublished,
+  (publication: LocalTrackPublication) => {
+    const track = publication.track;
+
+    if (
+      track &&
+      track.kind === 'video'
+    ) {
+      attachTrack(track);
+    }
+  }
+);
 
     room.on(RoomEvent.Disconnected, () => {
       setConnected(false);
