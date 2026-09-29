@@ -658,6 +658,20 @@ async function openBookingFile(fileId: string) {
                               Cancel
                             </button>
                           )}
+{b.status === 'confirmed' &&
+  b.payment_status === 'paid' && (
+    <button
+      style={buttonStyle}
+      onClick={() =>
+        window.open(
+          `/consultation/${b.id}`,
+          '_blank'
+        )
+      }
+    >
+      Join Consultation
+    </button>
+  )}
                         </div>
                           
 
