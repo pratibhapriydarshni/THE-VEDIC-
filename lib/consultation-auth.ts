@@ -57,11 +57,21 @@ export async function authorizeBooking(
   }
 
   if (
-    booking.status !== 'confirmed' &&
-    booking.payment_status !== 'paid'
-  ) {
-    throw new Error('PAYMENT_REQUIRED');
+  booking.status !== 'confirmed' ||
+  booking.payment_status !== 'paid'
+) {
+  throw new Error('PAYMENT_REQUIRED');
+}
+
+if (!admin) {
+  const startTime = new Date(booking.start_at).getTime();
+  const opensAt = startTime - 5 * 60 * 1000;
+
+  if (Date.now() < opensAt) {
+    throw new Error('CONSULTATION_NOT_OPEN');
   }
+}
+
 
   return {
     user,

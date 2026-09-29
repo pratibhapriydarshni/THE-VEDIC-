@@ -65,15 +65,24 @@ export async function POST(req: Request) {
   } catch (e: any) {
     return NextResponse.json(
       {
-        error: e.message || 'token failed',
+        error:
+  e.message === 'CONSULTATION_NOT_OPEN'
+    ? 'Your consultation will open 5 minutes before the scheduled time.'
+    : e.message === 'PAYMENT_REQUIRED'
+    ? 'Consultation is available only after booking confirmation and payment verification.'
+    : e.message || 'token failed',
       },
       {
-        status:
-          e.message === 'AUTH_REQUIRED'
-            ? 401
-            : e.message === 'FORBIDDEN'
-            ? 403
-            : 400,
+       status:
+  e.message === 'AUTH_REQUIRED'
+    ? 401
+    : e.message === 'FORBIDDEN'
+    ? 403
+    : e.message === 'CONSULTATION_NOT_OPEN'
+    ? 425
+    : e.message === 'PAYMENT_REQUIRED'
+    ? 403
+    : 400,
       }
     );
   }

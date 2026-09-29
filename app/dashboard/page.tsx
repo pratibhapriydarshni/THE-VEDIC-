@@ -12,6 +12,15 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [uploadMessage, setUploadMessage] = useState<Record<string, string>>({});
+const [now, setNow] = useState(Date.now());
+
+useEffect(() => {
+  const timer = window.setInterval(() => {
+    setNow(Date.now());
+  }, 30000);
+
+  return () => window.clearInterval(timer);
+}, []);
 
   useEffect(() => {
     (async () => {
@@ -126,7 +135,12 @@ export default function Dashboard() {
                   const canUpload =
                     b.status === 'confirmed' &&
                     b.payment_status === 'paid';
+const startTime = new Date(b.start_at).getTime();
+const opensAt = startTime - 5 * 60 * 1000;
 
+const canJoin =
+  canUpload &&
+  now >= opensAt;
                   return (
                     <div
                       key={b.id}
@@ -164,7 +178,7 @@ export default function Dashboard() {
                             : b.payment_status || 'Pending'}
                         </strong>
                       </p>
-{canUpload && (
+{canJoin && (
   <div style={{ marginTop: '14px', marginBottom: '14px' }}>
     <a
       className="cta"
