@@ -1,66 +1,95 @@
+'use client';
+
 import SiteNav from "@/components/site-nav";
 import SiteFooter from "@/components/site-footer";
-
-const services = [
-  {
-    icon: "✦",
-    title: "Kundli Reading",
-    text: "Understand your future, planetary positions & life path.",
-    price: "₹499",
-    time: "30 min",
-  },
-  {
-    icon: "☝",
-    title: "Palmistry",
-    text: "Know your personality, strengths & opportunities.",
-    price: "₹499",
-    time: "30 min",
-  },
-  {
-    icon: "⌂",
-    title: "Vastu Consultation",
-    text: "Bring harmony, positivity and balance to your space.",
-    price: "₹799",
-    time: "45 min",
-  },
-  {
-    icon: "▣",
-    title: "Career Guidance",
-    text: "Get clarity in career, education and professional growth.",
-    price: "₹499",
-    time: "30 min",
-  },
-  {
-    icon: "♥",
-    title: "Relationship Guidance",
-    text: "Guidance for love, marriage and relationships.",
-    price: "₹499",
-    time: "30 min",
-  },
-  {
-    icon: "♟",
-    title: "Family Guidance",
-    text: "Traditional guidance for family concerns and decisions.",
-    price: "₹499",
-    time: "30 min",
-  },
-  {
-    icon: "☸",
-    title: "Occult Consultation",
-    text: "Private spiritual and traditional occult guidance.",
-    price: "₹599",
-    time: "30 min",
-  },
-  {
-    icon: "☀",
-    title: "Motivational Guidance",
-    text: "Build confidence, focus and positive direction.",
-    price: "₹399",
-    time: "30 min",
-  },
-];
+import { useLanguage } from "@/components/language-provider";
 
 export default function Home() {
+  const { t } = useLanguage();
+
+  const services = [
+    {
+      icon: "✦",
+      title: t("Kundli Reading", "कुंडली परामर्श"),
+      text: t(
+        "Understand your future, planetary positions & life path.",
+        "अपने भविष्य, ग्रहों की स्थिति और जीवन की दिशा को समझें।"
+      ),
+      price: "₹499",
+      time: "30 min",
+    },
+    {
+      icon: "☝",
+      title: t("Palmistry", "हस्तरेखा"),
+      text: t(
+        "Know your personality, strengths & opportunities.",
+        "अपने व्यक्तित्व, क्षमताओं और अवसरों को जानें।"
+      ),
+      price: "₹499",
+      time: "30 min",
+    },
+    {
+      icon: "⌂",
+      title: t("Vastu Consultation", "वास्तु परामर्श"),
+      text: t(
+        "Bring harmony, positivity and balance to your space.",
+        "अपने स्थान में सामंजस्य, सकारात्मकता और संतुलन लाएँ।"
+      ),
+      price: "₹799",
+      time: "45 min",
+    },
+    {
+      icon: "▣",
+      title: t("Career Guidance", "करियर मार्गदर्शन"),
+      text: t(
+        "Get clarity in career, education and professional growth.",
+        "करियर, शिक्षा और व्यावसायिक प्रगति के लिए स्पष्ट मार्गदर्शन प्राप्त करें।"
+      ),
+      price: "₹499",
+      time: "30 min",
+    },
+    {
+      icon: "♥",
+      title: t("Relationship Guidance", "रिश्तों का मार्गदर्शन"),
+      text: t(
+        "Guidance for love, marriage and relationships.",
+        "प्रेम, विवाह और रिश्तों से जुड़े विषयों पर मार्गदर्शन।"
+      ),
+      price: "₹499",
+      time: "30 min",
+    },
+    {
+      icon: "♟",
+      title: t("Family Guidance", "पारिवारिक मार्गदर्शन"),
+      text: t(
+        "Traditional guidance for family concerns and decisions.",
+        "पारिवारिक चिंताओं और निर्णयों के लिए पारंपरिक मार्गदर्शन।"
+      ),
+      price: "₹499",
+      time: "30 min",
+    },
+    {
+      icon: "☸",
+      title: t("Occult Consultation", "गूढ़ विद्या परामर्श"),
+      text: t(
+        "Private spiritual and traditional occult guidance.",
+        "निजी आध्यात्मिक और पारंपरिक गूढ़ विद्या संबंधी मार्गदर्शन।"
+      ),
+      price: "₹599",
+      time: "30 min",
+    },
+    {
+      icon: "☀",
+      title: t("Motivational Guidance", "प्रेरणात्मक मार्गदर्शन"),
+      text: t(
+        "Build confidence, focus and positive direction.",
+        "आत्मविश्वास, एकाग्रता और सकारात्मक दिशा विकसित करें।"
+      ),
+      price: "₹399",
+      time: "30 min",
+    },
+  ];
+
   return (
     <>
       <SiteNav />
@@ -73,51 +102,57 @@ export default function Home() {
 
             <div className="exactHeroCopy">
               <p className="exactEyebrow">
-                WELCOME TO THE VEDIC ASTRO
+                {t(
+                  "WELCOME TO THE VEDIC ASTRO",
+                  "THE VEDIC ASTRO में आपका स्वागत है"
+                )}
               </p>
 
               <h1>
-                Discover Your Path Through
+                {t("Discover Your Path Through", "अपना मार्ग खोजें")}
                 <br />
-                Vedic Astrology
+                {t(
+                  "Vedic Astrology",
+                  "वैदिक ज्योतिष के माध्यम से"
+                )}
               </h1>
 
               <p className="exactHeroText">
-                Get personalized guidance for your life, career,
-                relationships, health and future. Connect with an
-                experienced astrologer and find clarity in every step
-                of your journey.
+                {t(
+                  "Get personalized guidance for your life, career, relationships, health and future. Connect with an experienced astrologer and find clarity in every step of your journey.",
+                  "अपने जीवन, करियर, रिश्तों, स्वास्थ्य और भविष्य के लिए व्यक्तिगत मार्गदर्शन प्राप्त करें। अनुभवी ज्योतिषाचार्य से जुड़ें और अपने जीवन की यात्रा के हर कदम पर स्पष्टता प्राप्त करें।"
+                )}
               </p>
 
               <div className="exactHeroActions">
                 <a href="/book" className="exactBookBtn">
-                  ▣ &nbsp; Book a Consultation
+                  ▣ &nbsp;
+                  {t("Book a Consultation", "परामर्श बुक करें")}
                 </a>
 
                 <a href="/contact" className="exactContactBtn">
-                  ☎ &nbsp; Contact Astrologer
+                  ☎ &nbsp;
+                  {t("Contact Astrologer", "ज्योतिषाचार्य से संपर्क करें")}
                 </a>
               </div>
 
               <div className="exactModes">
-                <span>◯ Chat</span>
+                <span>◯ {t("Chat", "चैट")}</span>
                 <b />
-                <span>◉ Audio</span>
+                <span>◉ {t("Audio", "ऑडियो")}</span>
                 <b />
-                <span>▣ Video</span>
+                <span>▣ {t("Video", "वीडियो")}</span>
                 <b />
-                <span>● English & Hindi</span>
+                <span>● {t("English & Hindi", "अंग्रेज़ी और हिन्दी")}</span>
               </div>
             </div>
 
             <div className="exactHeroArt">
-
               <div className="exactZodiac">
                 <span>ॐ</span>
               </div>
 
               <div className="exactTrishul">♆</div>
-
               <div className="exactAstroGlow" />
 
               <img
@@ -132,7 +167,10 @@ export default function Home() {
                 <div>
                   <strong>Pt. Deepak Acharya</strong>
                   <small>
-                    Kundli Specialist &amp; Astro-Palmist
+                    {t(
+                      "Kundli Specialist & Astro-Palmist",
+                      "कुंडली विशेषज्ञ एवं हस्तरेखा विशेषज्ञ"
+                    )}
                   </small>
                 </div>
               </div>
@@ -142,7 +180,6 @@ export default function Home() {
                 <span className="deskBook secondBook">▰</span>
                 <span className="deskDiya">♨</span>
               </div>
-
             </div>
           </div>
         </section>
@@ -153,13 +190,23 @@ export default function Home() {
 
             <div className="exactServiceHeader">
               <div>
-                <p className="exactEyebrow">OUR SERVICES</p>
-                <h2>Explore Our Consultations</h2>
+                <p className="exactEyebrow">
+                  {t("OUR SERVICES", "हमारी सेवाएँ")}
+                </p>
+
+                <h2>
+                  {t(
+                    "Explore Our Consultations",
+                    "हमारे परामर्श देखें"
+                  )}
+                </h2>
               </div>
 
               <p>
-                Choose from a variety of expert services designed to
-                guide you in every aspect of life.
+                {t(
+                  "Choose from a variety of expert services designed to guide you in every aspect of life.",
+                  "जीवन के विभिन्न पहलुओं में मार्गदर्शन के लिए हमारी विशेषज्ञ सेवाओं में से अपनी आवश्यकता के अनुसार सेवा चुनें।"
+                )}
               </p>
             </div>
 
@@ -175,7 +222,6 @@ export default function Home() {
 
                   <div className="exactServiceContent">
                     <h3>{service.title}</h3>
-
                     <p>{service.text}</p>
 
                     <div className="exactServicePrice">
@@ -196,13 +242,22 @@ export default function Home() {
           <div className="exactSection">
 
             <div className="exactCenterHeading">
-              <p className="exactEyebrow">HOW IT WORKS</p>
+              <p className="exactEyebrow">
+                {t("HOW IT WORKS", "यह कैसे काम करता है")}
+              </p>
 
-              <h2>Simple 3 Steps to Get Started</h2>
+              <h2>
+                {t(
+                  "Simple 3 Steps to Get Started",
+                  "शुरू करने के लिए केवल 3 आसान चरण"
+                )}
+              </h2>
 
               <p>
-                Book your session in just a few clicks and connect
-                with Pt. Deepak Acharya.
+                {t(
+                  "Book your session in just a few clicks and connect with Pt. Deepak Acharya.",
+                  "कुछ ही क्लिक में अपना सत्र बुक करें और पं. दीपक आचार्य से जुड़ें।"
+                )}
               </p>
             </div>
 
@@ -211,9 +266,16 @@ export default function Home() {
               <article>
                 <div className="exactStepIcon">▣</div>
                 <span>01</span>
-                <h3>Choose Service</h3>
+
+                <h3>
+                  {t("Choose Service", "सेवा चुनें")}
+                </h3>
+
                 <p>
-                  Select the consultation type that matches your needs.
+                  {t(
+                    "Select the consultation type that matches your needs.",
+                    "अपनी आवश्यकता के अनुसार परामर्श सेवा चुनें।"
+                  )}
                 </p>
               </article>
 
@@ -222,9 +284,16 @@ export default function Home() {
               <article>
                 <div className="exactStepIcon">◷</div>
                 <span>02</span>
-                <h3>Select Slot</h3>
+
+                <h3>
+                  {t("Select Slot", "समय चुनें")}
+                </h3>
+
                 <p>
-                  Pick your preferred available date and time.
+                  {t(
+                    "Pick your preferred available date and time.",
+                    "अपनी पसंद की उपलब्ध तारीख और समय चुनें।"
+                  )}
                 </p>
               </article>
 
@@ -233,9 +302,19 @@ export default function Home() {
               <article>
                 <div className="exactStepIcon">♙</div>
                 <span>03</span>
-                <h3>Consult Astrologer</h3>
+
+                <h3>
+                  {t(
+                    "Consult Astrologer",
+                    "ज्योतिषाचार्य से परामर्श करें"
+                  )}
+                </h3>
+
                 <p>
-                  Connect privately at your scheduled consultation time.
+                  {t(
+                    "Connect privately at your scheduled consultation time.",
+                    "अपने निर्धारित परामर्श समय पर निजी रूप से जुड़ें।"
+                  )}
                 </p>
               </article>
 
@@ -243,7 +322,7 @@ export default function Home() {
 
             <div className="exactCenterButton">
               <a href="/services">
-                View All Services →
+                {t("View All Services", "सभी सेवाएँ देखें")} →
               </a>
             </div>
 
@@ -265,38 +344,57 @@ export default function Home() {
 
             <div className="exactProfileInfo">
               <p className="exactEyebrow">
-                MEET YOUR CONSULTANT
+                {t(
+                  "MEET YOUR CONSULTANT",
+                  "अपने ज्योतिषाचार्य से मिलें"
+                )}
               </p>
 
               <h2>Pt. Deepak Acharya</h2>
 
               <h4>
-                Kundli Specialist &amp; Astro-Palmist
+                {t(
+                  "Kundli Specialist & Astro-Palmist",
+                  "कुंडली विशेषज्ञ एवं हस्तरेखा विशेषज्ञ"
+                )}
               </h4>
 
               <p>
-                With 25 years of experience in Vedic astrology,
-                palmistry and Vastu, Pt. Deepak Acharya provides
-                traditional guidance for greater clarity and direction.
+                {t(
+                  "With 25 years of experience in Vedic astrology, palmistry and Vastu, Pt. Deepak Acharya provides traditional guidance for greater clarity and direction.",
+                  "वैदिक ज्योतिष, हस्तरेखा और वास्तु में 25 वर्षों के अनुभव के साथ पं. दीपक आचार्य जीवन में अधिक स्पष्टता और सही दिशा के लिए पारंपरिक मार्गदर्शन प्रदान करते हैं।"
+                )}
               </p>
 
               <div className="exactCredentials">
-                <span>✦ 25 Years Experience</span>
-                <span>✦ Acharya (Master in Astro)</span>
+                <span>
+                  ✦ {t("25 Years Experience", "25 वर्षों का अनुभव")}
+                </span>
+
+                <span>
+                  ✦ {t(
+                    "Acharya (Master in Astro)",
+                    "आचार्य (ज्योतिष में विशेषज्ञता)"
+                  )}
+                </span>
+
                 <span>✦ Hastrekha Srimani</span>
-                <span>✦ Diploma in Vastu</span>
+
+                <span>
+                  ✦ {t("Diploma in Vastu", "वास्तु में डिप्लोमा")}
+                </span>
               </div>
 
               <a href="/about" className="exactProfileBtn">
-                View Profile →
+                {t("View Profile", "प्रोफ़ाइल देखें")} →
               </a>
             </div>
 
             <div className="exactQuote">
               <p>
-                “ Guidance today,
+                “ {t("Guidance today,", "आज का मार्गदर्शन,")}
                 <br />
-                a better tomorrow ”
+                {t("a better tomorrow", "बेहतर कल की ओर")} ”
               </p>
 
               <span>ॐ</span>
@@ -312,24 +410,37 @@ export default function Home() {
             <div className="exactCtaOm">ॐ</div>
 
             <div className="exactCtaText">
-              <p>READY TO DISCOVER YOUR FUTURE?</p>
+              <p>
+                {t(
+                  "READY TO DISCOVER YOUR FUTURE?",
+                  "अपने भविष्य को समझने के लिए तैयार हैं?"
+                )}
+              </p>
 
               <h2>
-                Book Your Astrology Consultation Today
+                {t(
+                  "Book Your Astrology Consultation Today",
+                  "आज ही अपना ज्योतिष परामर्श बुक करें"
+                )}
               </h2>
 
               <span>
-                Personalized guidance. Start your journey now.
+                {t(
+                  "Personalized guidance. Start your journey now.",
+                  "व्यक्तिगत मार्गदर्शन प्राप्त करें। अपनी यात्रा आज ही शुरू करें।"
+                )}
               </span>
             </div>
 
             <div className="exactCtaButtons">
               <a href="/book">
-                ▣ &nbsp; Book a Consultation
+                ▣ &nbsp;
+                {t("Book a Consultation", "परामर्श बुक करें")}
               </a>
 
               <a href="/contact">
-                ☎ &nbsp; Contact Astrologer
+                ☎ &nbsp;
+                {t("Contact Astrologer", "ज्योतिषाचार्य से संपर्क करें")}
               </a>
             </div>
 

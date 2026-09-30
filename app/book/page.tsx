@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import SiteNav from '@/components/site-nav';
 import SiteFooter from '@/components/site-footer';
 import { supabaseBrowser } from '@/lib/supabase-browser';
+import { useLanguage } from '@/components/language-provider';
 
 type Service = {
   id: string;
@@ -14,10 +15,14 @@ type Service = {
 };
 
 export default function BookPage() {
+  const { language: siteLanguage, t } = useLanguage();
+
   const [services, setServices] = useState<Service[]>([]);
   const [serviceId, setServiceId] = useState('');
-  const [language, setLanguage] = useState<'Hindi' | 'English'>('Hindi');
-  const [mode, setMode] = useState<'Chat' | 'Audio' | 'Video'>('Video');
+  const [language, setLanguage] =
+    useState<'Hindi' | 'English'>('Hindi');
+  const [mode, setMode] =
+    useState<'Chat' | 'Audio' | 'Video'>('Video');
   const [date, setDate] = useState('');
   const [slots, setSlots] = useState<string[]>([]);
   const [startAt, setStartAt] = useState('');
@@ -34,7 +39,8 @@ export default function BookPage() {
   const [bookingId, setBookingId] = useState('');
   const [utr, setUtr] = useState('');
   const [paymentStep, setPaymentStep] = useState(false);
-  const [verificationPending, setVerificationPending] = useState(false);
+  const [verificationPending, setVerificationPending] =
+    useState(false);
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -49,7 +55,12 @@ export default function BookPage() {
         setServices(data.services || []);
       })
       .catch(() => {
-        setMessage('Unable to load services.');
+        setMessage(
+          t(
+            'Unable to load services.',
+            'सेवाएँ लोड नहीं हो सकीं।'
+          )
+        );
       });
   }, []);
 
@@ -69,12 +80,18 @@ export default function BookPage() {
         setSlots(data.slots || []);
       })
       .catch(() => {
-        setMessage('Unable to load available slots.');
+        setMessage(
+          t(
+            'Unable to load available slots.',
+            'उपलब्ध समय लोड नहीं हो सके।'
+          )
+        );
       });
   }, [date, serviceId]);
 
   async function getSession() {
     const sb = supabaseBrowser();
+
     const {
       data: { session },
     } = await sb.auth.getSession();
@@ -87,7 +104,12 @@ export default function BookPage() {
     setMessage('');
 
     if (!serviceId || !startAt) {
-      setMessage('Please select service, date and time.');
+      setMessage(
+        t(
+          'Please select service, date and time.',
+          'कृपया सेवा, तारीख और समय चुनें।'
+        )
+      );
       return;
     }
 
@@ -126,7 +148,13 @@ export default function BookPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data.error || 'Booking could not be created.');
+        setMessage(
+          data.error ||
+            t(
+              'Booking could not be created.',
+              'बुकिंग नहीं बनाई जा सकी।'
+            )
+        );
         return;
       }
 
@@ -138,7 +166,12 @@ export default function BookPage() {
         behavior: 'smooth',
       });
     } catch {
-      setMessage('Something went wrong. Please try again.');
+      setMessage(
+        t(
+          'Something went wrong. Please try again.',
+          'कुछ गलत हो गया। कृपया फिर से प्रयास करें।'
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -151,7 +184,12 @@ export default function BookPage() {
     const cleanUtr = utr.trim();
 
     if (cleanUtr.length < 6) {
-      setMessage('Please enter a valid UTR / transaction reference.');
+      setMessage(
+        t(
+          'Please enter a valid UTR / transaction reference.',
+          'कृपया सही UTR / ट्रांजैक्शन रेफरेंस दर्ज करें।'
+        )
+      );
       return;
     }
 
@@ -182,17 +220,32 @@ export default function BookPage() {
       if (!res.ok) {
         if (data.error === 'UTR_ALREADY_USED') {
           setMessage(
-            'This UTR has already been submitted for another booking.'
+            t(
+              'This UTR has already been submitted for another booking.',
+              'यह UTR पहले ही दूसरी बुकिंग के लिए जमा किया जा चुका है।'
+            )
           );
         } else {
-          setMessage(data.error || 'Unable to submit payment details.');
+          setMessage(
+            data.error ||
+              t(
+                'Unable to submit payment details.',
+                'भुगतान की जानकारी जमा नहीं हो सकी।'
+              )
+          );
         }
+
         return;
       }
 
       setVerificationPending(true);
     } catch {
-      setMessage('Unable to submit payment details. Please try again.');
+      setMessage(
+        t(
+          'Unable to submit payment details. Please try again.',
+          'भुगतान की जानकारी जमा नहीं हो सकी। कृपया फिर से प्रयास करें।'
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -205,18 +258,29 @@ export default function BookPage() {
 
         <main className="wrap">
           <div className="card">
-            <h1>Payment Verification Pending</h1>
+            <h1>
+              {t(
+                'Payment Verification Pending',
+                'भुगतान सत्यापन लंबित है'
+              )}
+            </h1>
 
             <p>
-              Your payment details have been submitted successfully.
+              {t(
+                'Your payment details have been submitted successfully.',
+                'आपकी भुगतान जानकारी सफलतापूर्वक जमा हो गई है।'
+              )}
             </p>
 
             <p>
-              Your booking will be confirmed after the payment is verified.
+              {t(
+                'Your booking will be confirmed after the payment is verified.',
+                'भुगतान सत्यापित होने के बाद आपकी बुकिंग कन्फर्म की जाएगी।'
+              )}
             </p>
 
             <a className="cta" href="/dashboard">
-              View Dashboard
+              {t('View Dashboard', 'डैशबोर्ड देखें')}
             </a>
           </div>
         </main>
@@ -233,20 +297,29 @@ export default function BookPage() {
 
         <main className="wrap">
           <div className="card">
-            <h1>Complete Payment</h1>
+            <h1>
+              {t('Complete Payment', 'भुगतान पूरा करें')}
+            </h1>
 
             {selectedService && (
               <>
                 <h2>{selectedService.name}</h2>
 
                 <p>
-                  Amount to Pay:{' '}
-                  <strong>₹{Number(selectedService.price_inr)}</strong>
+                  {t('Amount to Pay:', 'भुगतान राशि:')}{' '}
+                  <strong>
+                    ₹{Number(selectedService.price_inr)}
+                  </strong>
                 </p>
               </>
             )}
 
-            <p>Scan the QR code below using your UPI app.</p>
+            <p>
+              {t(
+                'Scan the QR code below using your UPI app.',
+                'अपने UPI ऐप से नीचे दिए गए QR कोड को स्कैन करें।'
+              )}
+            </p>
 
             <div
               style={{
@@ -272,17 +345,26 @@ export default function BookPage() {
             </p>
 
             <p>
-              Please pay the exact amount shown above. After payment,
-              enter the UTR / transaction reference below.
+              {t(
+                'Please pay the exact amount shown above. After payment, enter the UTR / transaction reference below.',
+                'कृपया ऊपर दिखाई गई सही राशि का भुगतान करें। भुगतान के बाद नीचे UTR / ट्रांजैक्शन रेफरेंस दर्ज करें।'
+              )}
             </p>
 
             <form onSubmit={submitUtr}>
               <label>
-                UTR / Transaction Reference
+                {t(
+                  'UTR / Transaction Reference',
+                  'UTR / ट्रांजैक्शन रेफरेंस'
+                )}
+
                 <input
                   value={utr}
                   onChange={(e) => setUtr(e.target.value)}
-                  placeholder="Enter payment UTR"
+                  placeholder={t(
+                    'Enter payment UTR',
+                    'भुगतान UTR दर्ज करें'
+                  )}
                   required
                   minLength={6}
                   maxLength={50}
@@ -298,14 +380,22 @@ export default function BookPage() {
                 disabled={loading}
               >
                 {loading
-                  ? 'Submitting...'
-                  : 'Submit Payment for Verification'}
+                  ? t(
+                      'Submitting...',
+                      'जमा किया जा रहा है...'
+                    )
+                  : t(
+                      'Submit Payment for Verification',
+                      'सत्यापन के लिए भुगतान जमा करें'
+                    )}
               </button>
             </form>
 
             <p style={{ marginTop: '20px' }}>
-              Do not submit payment details unless you have completed
-              the payment.
+              {t(
+                'Do not submit payment details unless you have completed the payment.',
+                'भुगतान पूरा किए बिना भुगतान की जानकारी जमा न करें।'
+              )}
             </p>
           </div>
         </main>
@@ -320,58 +410,91 @@ export default function BookPage() {
       <SiteNav />
 
       <main className="wrap">
-        <h1>Book Consultation</h1>
+        <h1>
+          {t('Book Consultation', 'परामर्श बुक करें')}
+        </h1>
 
         <form className="card" onSubmit={createBooking}>
           <label>
-            Service
+            {t('Service', 'सेवा')}
+
             <select
               value={serviceId}
               onChange={(e) => setServiceId(e.target.value)}
               required
             >
-              <option value="">Select Service</option>
+              <option value="">
+                {t('Select Service', 'सेवा चुनें')}
+              </option>
 
               {services.map((service) => (
-                <option key={service.id} value={service.id}>
+                <option
+                  key={service.id}
+                  value={service.id}
+                >
                   {service.name} — ₹{service.price_inr} /{' '}
-                  {service.duration_minutes} min
+                  {service.duration_minutes}{' '}
+                  {t('min', 'मिनट')}
                 </option>
               ))}
             </select>
           </label>
 
           <label>
-            Language
+            {t('Language', 'परामर्श की भाषा')}
+
             <select
               value={language}
               onChange={(e) =>
-                setLanguage(e.target.value as 'Hindi' | 'English')
+                setLanguage(
+                  e.target.value as 'Hindi' | 'English'
+                )
               }
             >
-              <option value="Hindi">Hindi</option>
-              <option value="English">English</option>
+              <option value="Hindi">
+                {t('Hindi', 'हिन्दी')}
+              </option>
+
+              <option value="English">
+                {t('English', 'अंग्रेज़ी')}
+              </option>
             </select>
           </label>
 
           <label>
-            Consultation Mode
+            {t(
+              'Consultation Mode',
+              'परामर्श का माध्यम'
+            )}
+
             <select
               value={mode}
               onChange={(e) =>
                 setMode(
-                  e.target.value as 'Chat' | 'Audio' | 'Video'
+                  e.target.value as
+                    | 'Chat'
+                    | 'Audio'
+                    | 'Video'
                 )
               }
             >
-              <option value="Chat">Chat</option>
-              <option value="Audio">Audio</option>
-              <option value="Video">Video</option>
+              <option value="Chat">
+                {t('Chat', 'चैट')}
+              </option>
+
+              <option value="Audio">
+                {t('Audio', 'ऑडियो')}
+              </option>
+
+              <option value="Video">
+                {t('Video', 'वीडियो')}
+              </option>
             </select>
           </label>
 
           <label>
-            Date
+            {t('Date', 'तारीख')}
+
             <input
               type="date"
               value={date}
@@ -381,7 +504,11 @@ export default function BookPage() {
           </label>
 
           <label>
-            Available Time
+            {t(
+              'Available Time',
+              'उपलब्ध समय'
+            )}
+
             <select
               value={startAt}
               onChange={(e) => setStartAt(e.target.value)}
@@ -390,26 +517,37 @@ export default function BookPage() {
             >
               <option value="">
                 {slots.length
-                  ? 'Select Time'
-                  : 'Select service and date first'}
+                  ? t('Select Time', 'समय चुनें')
+                  : t(
+                      'Select service and date first',
+                      'पहले सेवा और तारीख चुनें'
+                    )}
               </option>
 
               {slots.map((slot) => (
                 <option key={slot} value={slot}>
-                  {new Date(slot).toLocaleTimeString('en-IN', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    timeZone: 'Asia/Kolkata',
-                  })}
+                  {new Date(slot).toLocaleTimeString(
+                    siteLanguage === 'hi'
+                      ? 'hi-IN'
+                      : 'en-IN',
+                    {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      timeZone: 'Asia/Kolkata',
+                    }
+                  )}
                 </option>
               ))}
             </select>
           </label>
 
-          <h2>Your Details</h2>
+          <h2>
+            {t('Your Details', 'आपकी जानकारी')}
+          </h2>
 
           <label>
-            Name
+            {t('Name', 'नाम')}
+
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -419,7 +557,8 @@ export default function BookPage() {
           </label>
 
           <label>
-            Phone
+            {t('Phone', 'फ़ोन नंबर')}
+
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -428,7 +567,8 @@ export default function BookPage() {
           </label>
 
           <label>
-            Email
+            {t('Email', 'ईमेल')}
+
             <input
               type="email"
               value={email}
@@ -438,47 +578,72 @@ export default function BookPage() {
           </label>
 
           <label>
-            Date of Birth
+            {t('Date of Birth', 'जन्म तिथि')}
+
             <input
               value={dob}
               onChange={(e) => setDob(e.target.value)}
-              placeholder="Optional"
+              placeholder={t(
+                'Optional',
+                'वैकल्पिक'
+              )}
             />
           </label>
 
           <label>
-            Time of Birth
+            {t('Time of Birth', 'जन्म समय')}
+
             <input
               value={tob}
               onChange={(e) => setTob(e.target.value)}
-              placeholder="Optional"
+              placeholder={t(
+                'Optional',
+                'वैकल्पिक'
+              )}
             />
           </label>
 
           <label>
-            Place of Birth
+            {t('Place of Birth', 'जन्म स्थान')}
+
             <input
               value={pob}
               onChange={(e) => setPob(e.target.value)}
-              placeholder="Optional"
+              placeholder={t(
+                'Optional',
+                'वैकल्पिक'
+              )}
             />
           </label>
 
           <label>
-            Current Place
+            {t('Current Place', 'वर्तमान स्थान')}
+
             <input
               value={currentPlace}
-              onChange={(e) => setCurrentPlace(e.target.value)}
-              placeholder="Optional"
+              onChange={(e) =>
+                setCurrentPlace(e.target.value)
+              }
+              placeholder={t(
+                'Optional',
+                'वैकल्पिक'
+              )}
             />
           </label>
 
           <label>
-            Purpose / Question
+            {t(
+              'Purpose / Question',
+              'परामर्श का उद्देश्य / प्रश्न'
+            )}
+
             <textarea
               value={purpose}
               onChange={(e) => setPurpose(e.target.value)}
-              placeholder="Tell us what you would like guidance about"
+              placeholder={t(
+                'Tell us what you would like guidance about',
+                'बताएँ कि आप किस विषय में मार्गदर्शन चाहते हैं'
+              )}
             />
           </label>
 
@@ -490,8 +655,14 @@ export default function BookPage() {
             disabled={loading}
           >
             {loading
-              ? 'Creating Booking...'
-              : 'Continue to Payment'}
+              ? t(
+                  'Creating Booking...',
+                  'बुकिंग बनाई जा रही है...'
+                )
+              : t(
+                  'Continue to Payment',
+                  'भुगतान के लिए आगे बढ़ें'
+                )}
           </button>
         </form>
       </main>
