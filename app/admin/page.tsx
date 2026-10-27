@@ -7,6 +7,7 @@ type Tab =
   | 'dashboard'
   | 'bookings'
   | 'payments'
+  | 'mihir'
   | 'services'
   | 'availability'
   | 'content'
@@ -72,6 +73,18 @@ type ConsultationFile = {
   mime_type: string;
   created_at: string;
 };
+type MihirPayment = {
+  id: string;
+  user_id: string;
+  amount_inr: number;
+  upi_utr: string | null;
+  status: 'pending' | 'verified' | 'rejected';
+  submitted_at: string;
+  verified_at: string | null;
+  session_started_at: string | null;
+  session_ended_at: string | null;
+};
+
 type Certificate = {
   id: string;
   title: string;
@@ -120,6 +133,7 @@ export default function AdminManagement() {
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [content, setContent] = useState<ContentItem[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [mihirPayments, setMihirPayments] = useState<MihirPayment[]>([]);
   const [workingId, setWorkingId] = useState<string | null>(null);
 const [bookingFiles, setBookingFiles] = useState<
   Record<string, ConsultationFile[]>
@@ -183,13 +197,14 @@ const [filesLoadingId, setFilesLoadingId] = useState<string | null>(null);
     setMessage('');
 
     try {
-      const [s, b, sv, av, ct, cert] = await Promise.all([
+      const [s, b, sv, av, ct, cert, mp] = await Promise.all([
         api('/api/admin/summary'),
         api('/api/admin/bookings'),
         api('/api/admin/services'),
         api('/api/admin/availability'),
         api('/api/admin/content'),
         api('/api/admin/certificates'),
+        api('/api/admin/mihir-payments'),
       ]);
 
       setSummary(s);
@@ -198,6 +213,7 @@ const [filesLoadingId, setFilesLoadingId] = useState<string | null>(null);
       setBlocks(av.blocks || []);
       setContent(ct.content || []);
       setCertificates(cert.certificates || []);
+      setMihirPayments(mp.payments || []);
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Unable to load admin data.');
     } finally {
@@ -236,6 +252,34 @@ const [filesLoadingId, setFilesLoadingId] = useState<string | null>(null);
       await loadAll();
     } catch (e) {
       setMessage(e instanceof Error ? e.message : 'Payment action failed.');
+    } finally {
+      setWorkingId(null);
+    }
+  }
+
+  async function mihirPaymentAction(paymentId: string, decision: 'approve' | 'reject') {
+    const promptText =
+      decision === 'approve'
+        ? 'Only approve after checking your UPI/bank app and confirming ₹99 was actually received for this UTR. Continue?'
+        : 'Reject this Mihir AI payment submission?';
+
+    if (!window.confirm(promptText)) return;
+
+    setWorkingId(paymentId);
+    setMessage('');
+    try {
+      await api('/api/admin/mihir-payments', {
+        method: 'POST',
+        body: JSON.stringify({ paymentId, decision }),
+      });
+      setMessage(
+        decision === 'approve'
+          ? 'Mihir AI payment approved. The customer can use the paid session until they end it.'
+          : 'Mihir AI payment rejected.',
+      );
+      await loadAll();
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'Unable to update Mihir AI payment.');
     } finally {
       setWorkingId(null);
     }
@@ -430,6 +474,10 @@ async function openBookingFile(fileId: string) {
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'bookings', label: 'Bookings' },
     { id: 'payments', label: `Payments (${pendingPayments.length})` },
+    {
+      id: 'mihir',
+      label: `Mihir AI Payments (${mihirPayments.filter((p) => p.status === 'pending').length})`,
+    },
     { id: 'services', label: 'Services & Pricing' },
     { id: 'availability', label: 'Availability' },
     { id: 'content', label: 'Website Content' },
@@ -859,6 +907,59 @@ async function openBookingFile(fileId: string) {
                       <div style={cardStyle}>
                         No payments waiting for verification.
                       </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {tab === 'mihir' && (
+                <>
+                  <h2>Mihir AI Payments</h2>
+                  <div
+                    style={{
+                      ...cardStyle,
+                      marginBottom: 20,
+                      background: '#fff4d9',
+                    }}
+                  >
+                    Customers pay ₹99 to request a Mihir AI session. Check your actual bank/UPI app for the ₹99 credit and match the UTR before approving. A customer-entered UTR alone is not proof of payment. Approved sessions remain active until the customer clicks End Session.
+                  </div>
+
+                  <div style={{ display: 'grid', gap: 16 }}>
+                    {mihirPayments.map((p) => (
+                      <div key={p.id} style={cardStyle}>
+                        <h3 style={{ marginTop: 0 }}>Mihir AI session · ₹{p.amount_inr}</h3>
+                        <p><strong>Status:</strong> {p.status}</p>
+                        <p><strong>UPI UTR:</strong> <span style={{ fontFamily: 'monospace', wordBreak: 'break-all' }}>{p.upi_utr || 'Not provided'}</span></p>
+                        <p><strong>Submitted:</strong> {dateTime(p.submitted_at)}</p>
+                        {p.session_started_at && (
+                          <p><strong>Session started:</strong> {dateTime(p.session_started_at)}</p>
+                        )}
+                        {p.session_ended_at && (
+                          <p><strong>Session ended:</strong> {dateTime(p.session_ended_at)}</p>
+                        )}
+                        {p.status === 'pending' && (
+                          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                            <button
+                              style={buttonStyle}
+                              disabled={workingId === p.id}
+                              onClick={() => mihirPaymentAction(p.id, 'approve')}
+                            >
+                              {workingId === p.id ? 'Working...' : 'Approve ₹99'}
+                            </button>
+                            <button
+                              style={buttonStyle}
+                              disabled={workingId === p.id}
+                              onClick={() => mihirPaymentAction(p.id, 'reject')}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {mihirPayments.length === 0 && (
+                      <div style={cardStyle}>No Mihir AI payment submissions yet.</div>
                     )}
                   </div>
                 </>
