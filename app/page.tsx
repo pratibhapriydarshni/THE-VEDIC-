@@ -134,6 +134,14 @@ export default function Home() {
                   ☎ &nbsp;
                   {t("Contact Astrologer", "ज्योतिषाचार्य से संपर्क करें")}
                 </a>
+<a href="/ai-astrologer" className="mihairHeroBtn">
+  <span className="mihairMiniAvatar">M</span>
+  <span>
+    <strong>Meet MIHAIR AI</strong>
+    <small>Explore your questions with AI</small>
+  </span>
+  <span className="mihairArrow">→</span>
+</a>
               </div>
 
               <div className="exactModes">
@@ -236,7 +244,36 @@ export default function Home() {
 
           </div>
         </section>
+{/* MIHAIR AI FEATURE */}
+<section className="mihairFeatureSection">
+  <div className="mihairFeatureCard">
+    <div className="mihairFeatureAvatar">
+      <div className="mihairOrbit"></div>
+      <span>M</span>
+    </div>
 
+    <div className="mihairFeatureCopy">
+      <p className="mihairFeatureEyebrow">
+        YOUR AI ASTROLOGY COMPANION
+      </p>
+
+      <h2>Meet MIHAIR AI</h2>
+
+      <p>
+        Have questions about astrology? Start a conversation with
+        your AI guide and explore your questions at your own pace.
+      </p>
+
+      <a href="/ai-astrologer" className="mihairFeatureBtn">
+        Start Chatting <span>→</span>
+      </a>
+    </div>
+
+    <div className="mihairFeatureDecor" aria-hidden="true">
+      ✦
+    </div>
+  </div>
+</section>
         {/* STEPS */}
         <section className="exactSteps">
           <div className="exactSection">

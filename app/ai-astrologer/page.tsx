@@ -1,8 +1,28 @@
 
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase-browser';
+import './ai-astrologer.css';
+
+type SpeechRecognitionResultLike = {
+  0: { transcript: string };
+};
+type SpeechRecognitionEventLike = { results: ArrayLike<SpeechRecognitionResultLike> };
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  maxAlternatives: number;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+type SpeechWindow = Window & {
+  SpeechRecognition?: new () => SpeechRecognitionLike;
+  webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+};
 
 type Message = {
   role: 'user' | 'assistant';
@@ -25,8 +45,74 @@ export default function AiAstrologerPage() {
   const [paidSession, setPaidSession] = useState(false);
   const [endingSession, setEndingSession] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
+  const [voiceListening, setVoiceListening] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [voiceLanguage, setVoiceLanguage] = useState('en-IN');
 
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.stop();
+      if (typeof window !== 'undefined') window.speechSynthesis?.cancel();
+    };
+  }, []);
+
+  function speakReply(text: string) {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = /[\u0900-\u097F]/.test(text) ? 'hi-IN' : 'en-IN';
+    utterance.rate = 0.94;
+    utterance.pitch = 0.92;
+    utterance.onstart = () => setSpeaking(true);
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function toggleVoice() {
+    if (voiceListening) {
+      recognitionRef.current?.stop();
+      setVoiceListening(false);
+      return;
+    }
+    const speechWindow = window as SpeechWindow;
+    const Recognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
+    if (!Recognition) {
+      setError('Voice input is not supported in this browser. Please try the latest Chrome browser.');
+      return;
+    }
+    setError('');
+    setVoiceMode(true);
+    const recognition = new Recognition();
+    recognition.lang = voiceLanguage;
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      const spokenText = event.results[0]?.[0]?.transcript?.trim();
+      setVoiceListening(false);
+      if (spokenText) {
+        setInput(spokenText);
+        window.setTimeout(() => { void sendMessage(spokenText); }, 80);
+      }
+    };
+    recognition.onerror = () => {
+      setVoiceListening(false);
+      setError('Microphone input stopped. Check browser microphone permission and try again.');
+    };
+    recognition.onend = () => setVoiceListening(false);
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+      setVoiceListening(true);
+    } catch {
+      setVoiceListening(false);
+      setError('Could not start the microphone. Please try again.');
+    }
+  }
 
   function choosePhoto(file?: File) {
     setError('');
@@ -69,8 +155,8 @@ export default function AiAstrologerPage() {
     return session.access_token;
   }
 
-  async function sendMessage() {
-    const message = input.trim();
+  async function sendMessage(voiceText?: string) {
+    const message = (voiceText ?? input).trim();
     if ((!message && !photo) || loading || endingSession || sessionEnded) return;
 
     setError('');
@@ -159,6 +245,8 @@ export default function AiAstrologerPage() {
           text: data.reply,
         },
       ]);
+
+      if (voiceMode) speakReply(String(data.reply || '')); 
 
       if (typeof data.freeMessagesRemaining === 'number') {
         setFreeMessagesRemaining(data.freeMessagesRemaining);
@@ -268,406 +356,152 @@ export default function AiAstrologerPage() {
   }
 
   return (
-    <main
-      style={{
-        minHeight: '80vh',
-        padding: '32px 16px',
-        background: '#fffaf0',
-        color: '#352416',
-      }}
-    >
-      <section style={{ maxWidth: 760, margin: '0 auto' }}>
-        <header style={{ textAlign: 'center', marginBottom: 28 }}>
-          <p
-            style={{
-              color: '#a66b18',
-              fontWeight: 700,
-              letterSpacing: 2,
-            }}
-          >
-            THE VEDIC ASTRO
-          </p>
-
-          <h1 style={{ fontSize: 32, marginBottom: 10 }}>Mihir AI</h1>
-
-          <p style={{ color: '#705d4c', lineHeight: 1.6 }}>
-            Explore Vedic astrology, zodiac signs, birth charts and
-            palmistry with your AI guide.
-          </p>
-
-          {freeMessagesRemaining !== null && !paidSession && (
-            <p style={{ color: '#8b572a', fontWeight: 600 }}>
-              Free messages remaining: {freeMessagesRemaining} / 5
-            </p>
-          )}
-
-          {paidSession && (
-            <div
-              style={{
-                background: '#e8f5e9',
-                color: '#21632b',
-                padding: 12,
-                borderRadius: 10,
-                marginTop: 16,
-              }}
-            >
-              <p style={{ margin: '0 0 10px', fontWeight: 700 }}>
-                Your paid session is active.
-              </p>
-              <button
-                type="button"
-                onClick={endSession}
-                disabled={endingSession || loading}
-                style={{
-                  background: '#9d2727',
-                  color: '#fff',
-                  border: 0,
-                  borderRadius: 8,
-                  padding: '10px 16px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                }}
-              >
-                {endingSession ? 'Ending session...' : 'End Session'}
-              </button>
-            </div>
-          )}
+    <main className="mihir-page">
+      <div className="mihir-shell">
+        <header className="mihir-topbar">
+          <a className="mihir-brand" href="/" aria-label="The Vedic Astro home">
+            <span className="mihir-brand-mark">ॐ</span>
+            <span><strong>THE VEDIC ASTRO</strong><small>WISDOM • GUIDANCE • DISCOVERY</small></span>
+          </a>
+          <span className="mihir-status"><i /> AI ASTROLOGY GUIDE</span>
         </header>
 
-        <section
-          aria-label="AI astrology chat"
-          style={{
-            background: '#fff',
-            border: '1px solid #eadbc6',
-            borderRadius: 16,
-            padding: 20,
-            minHeight: 320,
-            boxShadow: '0 8px 28px rgba(70,45,15,0.06)',
-          }}
-        >
-          {messages.length === 0 && (
-            <div style={{ padding: '32px 8px', textAlign: 'center' }}>
-              <div style={{ fontSize: 36, marginBottom: 12 }}>🙏</div>
-              <h2 style={{ fontSize: 19 }}>Namaste! How can I help?</h2>
-              <p style={{ color: '#705d4c', lineHeight: 1.7 }}>
-                Ask an astrology question or upload a clear photo of your
-                palm for a general palmistry interpretation.
-              </p>
+        <section className="mihir-hero">
+          <div className="mihir-hero-copy">
+            <span className="mihir-kicker"><span>✦</span> YOUR PERSONAL ASTROLOGY COMPANION</span>
+            <h1>Meet <span>Mihir AI</span></h1>
+            <p>Explore Vedic astrology, zodiac signs, birth charts and palmistry with your AI guide.</p>
+            <div className="mihir-hero-points">
+              <span>✧ Astrology insights</span>
+              <span>✧ Zodiac & birth charts</span>
+              <span>✧ Palm photo guidance</span>
             </div>
-          )}
-
-          <div style={{ display: 'grid', gap: 16 }}>
-            {messages.map((message, index) => (
-              <article
-                key={index}
-                style={{
-                  justifySelf: message.role === 'user' ? 'end' : 'start',
-                  maxWidth: '90%',
-                  padding: '12px 15px',
-                  borderRadius: 14,
-                  background:
-                    message.role === 'user' ? '#8b572a' : '#f6eee2',
-                  color: message.role === 'user' ? '#fff' : '#352416',
-                  whiteSpace: 'pre-wrap',
-                  lineHeight: 1.65,
-                  overflowWrap: 'anywhere',
-                }}
-              >
-                {message.imageUrl && (
-                  <img
-                    src={message.imageUrl}
-                    alt="Palm photo selected for palmistry reading"
-                    style={{
-                      display: 'block',
-                      maxWidth: '100%',
-                      maxHeight: 240,
-                      objectFit: 'contain',
-                      borderRadius: 10,
-                      marginBottom: 10,
-                    }}
-                  />
-                )}
-                {message.text}
-              </article>
-            ))}
           </div>
-
-          {loading && (
-            <p role="status" style={{ color: '#8b572a', marginTop: 18 }}>
-              Your AI guide is thinking...
-            </p>
-          )}
-
-          {error && (
-            <p role="alert" style={{ color: '#b42318', marginTop: 16 }}>
-              {error}
-            </p>
-          )}
-
-          {showPayment && !paidSession && (
-            <section
-              style={{
-                marginTop: 24,
-                padding: 18,
-                border: '1px solid #d8bd96',
-                borderRadius: 12,
-                background: '#fffaf0',
-              }}
-            >
-              <h2 style={{ marginTop: 0, fontSize: 21 }}>
-                Continue with Mihir AI
-              </h2>
-
-              {sessionEnded ? (
-                <p>Your previous paid session has ended.</p>
-              ) : (
-                <p>
-                  Your five free messages have been used. Pay ₹99 for a
-                  session that stays active until you click End Session.
-                </p>
-              )}
-
-              <p>
-                <strong>UPI ID:</strong>{' '}
-                <span>thevedicastroindia@ybl</span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    void navigator.clipboard
-                      .writeText('thevedicastroindia@ybl')
-                      .then(() => setError('UPI ID copied.'))
-                      .catch(() => setError('Please copy the UPI ID manually.'))
-                  }
-                  style={{
-                    marginLeft: 10,
-                    padding: '5px 9px',
-                    border: '1px solid #c9ad8e',
-                    borderRadius: 6,
-                    background: '#fff',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Copy UPI ID
-                </button>
-              </p>
-
-              <p style={{ color: '#705d4c', lineHeight: 1.6 }}>
-                Pay ₹99 using your UPI app. After completing payment, enter
-                the UTR/reference number below. Your paid session starts only
-                after the admin verifies your payment. Do not submit a
-                reference number for a payment you have not made.
-              </p>
-
-              {paymentPending ? (
-                <p style={{ color: '#8b572a', fontWeight: 600 }}>
-                  Payment reference submitted. Await admin verification.
-                </p>
-              ) : (
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void submitPayment();
-                  }}
-                  style={{ display: 'grid', gap: 12 }}
-                >
-                  <label htmlFor="mihir-utr" style={{ fontWeight: 600 }}>
-                    UTR / transaction reference number
-                  </label>
-
-                  <input
-                    id="mihir-utr"
-                    value={utr}
-                    onChange={(event) => setUtr(event.target.value)}
-                    minLength={8}
-                    maxLength={30}
-                    pattern="[A-Za-z0-9]{8,30}"
-                    required
-                    placeholder="Enter your UTR number"
-                    disabled={loading}
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      padding: 12,
-                      border: '1px solid #d8c5ad',
-                      borderRadius: 8,
-                    }}
-                  />
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      padding: 12,
-                      border: 0,
-                      borderRadius: 8,
-                      background: '#8b572a',
-                      color: '#fff',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {loading ? 'Submitting...' : 'Submit Payment Reference'}
-                  </button>
-                </form>
-              )}
-            </section>
-          )}
-
-          {photoPreview && (
-            <div
-              style={{
-                marginTop: 20,
-                padding: 12,
-                background: '#f6eee2',
-                borderRadius: 12,
-              }}
-            >
-              <p style={{ fontWeight: 600, marginTop: 0 }}>
-                Palm photo selected
-              </p>
-
-              <img
-                src={photoPreview}
-                alt="Preview of your selected palm photo"
-                style={{
-                  display: 'block',
-                  maxWidth: '100%',
-                  maxHeight: 220,
-                  borderRadius: 10,
-                  objectFit: 'contain',
-                }}
-              />
-
-              <button
-                type="button"
-                onClick={removePhoto}
-                disabled={loading}
-                style={{
-                  marginTop: 10,
-                  border: '1px solid #c9ad8e',
-                  background: '#fff',
-                  color: '#69421f',
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  cursor: 'pointer',
-                }}
-              >
-                Remove photo
-              </button>
-            </div>
-          )}
-
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void sendMessage();
-            }}
-            style={{
-              display: 'grid',
-              gap: 12,
-              marginTop: 24,
-              paddingTop: 18,
-              borderTop: '1px solid #eadbc6',
-            }}
-          >
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              hidden
-              onChange={(event) => choosePhoto(event.target.files?.[0])}
-            />
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-              <button
-                type="button"
-                onClick={() => fileInput.current?.click()}
-                disabled={loading || paidSession === false && sessionEnded}
-                style={{
-                  border: '1px solid #c9ad8e',
-                  borderRadius: 10,
-                  padding: '11px 14px',
-                  background: '#fffaf0',
-                  color: '#69421f',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                📷 Upload Palm Photo
-              </button>
-
-              <span
-                style={{
-                  alignSelf: 'center',
-                  color: '#705d4c',
-                  fontSize: 12,
-                }}
-              >
-                JPG, PNG or WebP · Max 3 MB
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', gap: 10 }}>
-              <input
-                value={input}
-                onChange={(event) => setInput(event.target.value)}
-                placeholder="Ask your astrology question..."
-                maxLength={2000}
-                disabled={loading || (sessionEnded && !paidSession)}
-                aria-label="Your message"
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  padding: '13px 14px',
-                  border: '1px solid #d8c5ad',
-                  borderRadius: 10,
-                  fontSize: 15,
-                }}
-              />
-
-              <button
-                type="submit"
-                disabled={
-                  loading ||
-                  (!input.trim() && !photo) ||
-                  (sessionEnded && !paidSession)
-                }
-                style={{
-                  border: 0,
-                  borderRadius: 10,
-                  padding: '12px 20px',
-                  background: '#8b572a',
-                  color: '#fff',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  opacity:
-                    loading ||
-                    (!input.trim() && !photo) ||
-                    (sessionEnded && !paidSession)
-                      ? 0.6
-                      : 1,
-                }}
-              >
-                {loading ? 'Wait...' : 'Send'}
-              </button>
-            </div>
-          </form>
+          <div className="mihir-avatar-stage" aria-label="Animated Mihir AI avatar">
+            <div className="mihir-orbit mihir-orbit-one" />
+            <div className="mihir-orbit mihir-orbit-two" />
+            <span className="mihir-star mihir-star-one">✦</span>
+            <span className="mihir-star mihir-star-two">✧</span>
+            <div className="mihir-avatar"><span>ॐ</span><i>✦</i></div>
+            <span className="mihir-avatar-caption">MIHIR AI</span>
+          </div>
         </section>
 
-        <p
-          style={{
-            marginTop: 16,
-            fontSize: 12,
-            lineHeight: 1.6,
-            textAlign: 'center',
-            color: '#705d4c',
-          }}
-        >
-          Palmistry and astrology are cultural and reflective practices,
-          not guaranteed predictions or substitutes for professional
-          medical, legal or financial advice.
-        </p>
-      </section>
+        <div className={`mihir-voice-status ${voiceListening ? 'is-listening' : ''} ${speaking ? 'is-speaking' : ''}`} aria-live="polite">
+          <span className="mihir-voice-pulse">{voiceListening ? '🎙' : speaking ? '🔊' : '✦'}</span>
+          <span><strong>{voiceListening ? 'Listening to you…' : speaking ? 'Mihir is speaking…' : 'Talk to Mihir AI'}</strong><small>Use your microphone and hear spoken replies. Browser microphone permission required.</small></span>
+          <label className="mihir-voice-language">Voice language<select value={voiceLanguage} onChange={(event) => setVoiceLanguage(event.target.value)} disabled={voiceListening}><option value="en-IN">English</option><option value="hi-IN">Hindi</option></select></label>
+        </div>
+
+        <div className="mihir-main-grid">
+          <section className="mihir-chat-card" aria-label="AI astrology chat">
+            <div className="mihir-chat-heading">
+              <div className="mihir-chat-title">
+                <span className="mihir-small-avatar">ॐ</span>
+                <div><h2>Your conversation</h2><p><i /> Here to help you explore</p></div>
+              </div>
+              {freeMessagesRemaining !== null && !paidSession && (
+                <span className="mihir-message-counter">{freeMessagesRemaining} of 5 free</span>
+              )}
+              {paidSession && <span className="mihir-paid-badge">✦ Session active</span>}
+            </div>
+
+            {paidSession && (
+              <div className="mihir-session-active">
+                <span>✦ Your paid session is active.</span>
+                <button type="button" onClick={endSession} disabled={endingSession || loading}>
+                  {endingSession ? 'Ending session…' : 'End session'}
+                </button>
+              </div>
+            )}
+
+            <div className="mihir-conversation">
+              {messages.length === 0 && (
+                <div className="mihir-welcome">
+                  <div className="mihir-welcome-icon">✧</div>
+                  <span className="mihir-welcome-eyebrow">NAMASTE</span>
+                  <h2>What would you like to explore?</h2>
+                  <p>Ask a question about astrology or share a clear palm photo for a general palmistry interpretation.</p>
+                  <div className="mihir-suggestions">
+                    <button type="button" onClick={() => setInput('What can my zodiac sign tell me?')}>✧ Explore my zodiac</button>
+                    <button type="button" onClick={() => setInput('Explain the basics of a birth chart.')}>☼ Understand birth charts</button>
+                    <button type="button" onClick={() => setInput('What should I know before a palmistry reading?')}>☷ Learn about palmistry</button>
+                  </div>
+                </div>
+              )}
+
+              <div className="mihir-messages">
+                {messages.map((message, index) => (
+                  <article key={index} className={`mihir-message ${message.role === 'user' ? 'mihir-message-user' : 'mihir-message-ai'}`}>
+                    {message.role === 'assistant' && <span className="mihir-message-avatar">ॐ</span>}
+                    <div className="mihir-message-bubble">
+                      {message.imageUrl && <img src={message.imageUrl} alt="Palm photo selected for palmistry reading" className="mihir-message-image" />}
+                      <p>{message.text}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+
+              {loading && <div className="mihir-thinking" role="status"><span className="mihir-thinking-dots"><i /><i /><i /></span> Mihir is thinking…</div>}
+              {error && <p className="mihir-notice" role="status">{error}</p>}
+
+              {showPayment && !paidSession && (
+                <section className="mihir-payment-card">
+                  <div className="mihir-payment-top">
+                    <span className="mihir-payment-icon">✦</span>
+                    <div><span className="mihir-payment-eyebrow">CONTINUE YOUR JOURNEY</span><h2>Mihir AI Premium Session</h2></div>
+                    <div className="mihir-price"><strong>₹99</strong><small>per session</small></div>
+                  </div>
+                  {sessionEnded ? <p className="mihir-payment-description">Your previous paid session has ended. You can request another session below.</p> : <p className="mihir-payment-description">Your five free messages have been used. Request a session that stays active until you choose to end it.</p>}
+                  <div className="mihir-upi-box">
+                    <div><span>PAY USING UPI</span><strong>thevedicastroindia@ybl</strong></div>
+                    <button type="button" onClick={() => void navigator.clipboard.writeText('thevedicastroindia@ybl').then(() => setError('UPI ID copied.')).catch(() => setError('Please copy the UPI ID manually.'))}>Copy UPI ID</button>
+                  </div>
+                  <p className="mihir-payment-note">Complete your ₹99 payment in your UPI app, then enter the transaction reference. Your paid session starts only after admin verification. Never submit a reference for a payment you have not made.</p>
+                  {paymentPending ? (
+                    <div className="mihir-pending"><span>◷</span><div><strong>Verification pending</strong><p>Your payment reference has been submitted. Please wait for admin verification.</p></div></div>
+                  ) : (
+                    <form onSubmit={(event) => { event.preventDefault(); void submitPayment(); }} className="mihir-payment-form">
+                      <label htmlFor="mihir-utr">UPI transaction reference (UTR)</label>
+                      <input id="mihir-utr" value={utr} onChange={(event) => setUtr(event.target.value)} minLength={8} maxLength={30} pattern="[A-Za-z0-9]{8,30}" required placeholder="Enter 8–30 letter/number reference" disabled={loading} />
+                      <button type="submit" disabled={loading}>{loading ? 'Submitting…' : 'Submit for verification'} <span>→</span></button>
+                    </form>
+                  )}
+                </section>
+              )}
+            </div>
+
+            {photoPreview && (
+              <div className="mihir-photo-preview">
+                <div><strong>Photo ready to send</strong><button type="button" onClick={removePhoto} disabled={loading}>Remove</button></div>
+                <img src={photoPreview} alt="Preview of your selected palm photo" />
+              </div>
+            )}
+
+            <form onSubmit={(event) => { event.preventDefault(); void sendMessage(); }} className="mihir-composer">
+              <input ref={fileInput} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => choosePhoto(event.target.files?.[0])} />
+              <button className={`mihir-voice-button ${voiceListening ? 'is-listening' : ''}`} type="button" onClick={toggleVoice} disabled={loading || (sessionEnded && !paidSession)} aria-pressed={voiceListening} aria-label={voiceListening ? 'Stop microphone' : 'Talk to Mihir AI'}>{voiceListening ? '■' : '🎙'} <span>{voiceListening ? 'Stop' : 'Talk'}</span></button>
+              <button className="mihir-upload-button" type="button" onClick={() => fileInput.current?.click()} disabled={loading || (paidSession === false && sessionEnded)} aria-label="Upload palm photo">＋ <span>Photo</span></button>
+              <input className="mihir-message-input" value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask Mihir about astrology…" maxLength={2000} disabled={loading || (sessionEnded && !paidSession)} aria-label="Your message" />
+              <button className="mihir-send-button" type="submit" disabled={loading || (!input.trim() && !photo) || (sessionEnded && !paidSession)}>{loading ? '…' : 'Send'} <span>➤</span></button>
+              <small className="mihir-upload-hint">JPG, PNG or WebP · Max 3 MB</small>
+            </form>
+          </section>
+
+          <aside className="mihir-side-panel">
+            <div className="mihir-side-symbol">✧</div>
+            <span className="mihir-side-eyebrow">A LITTLE GUIDANCE</span>
+            <h2>Curiosity meets cosmic wisdom.</h2>
+            <p>Start with a question, explore a concept, or upload a palm photo. Take what feels useful and reflect at your own pace.</p>
+            <div className="mihir-side-divider" />
+            <div className="mihir-side-feature"><span>01</span><div><strong>Ask freely</strong><small>Explore astrology topics in simple language.</small></div></div>
+            <div className="mihir-side-feature"><span>02</span><div><strong>Share a palm photo</strong><small>Get a general, reflective interpretation.</small></div></div>
+            <div className="mihir-side-feature"><span>03</span><div><strong>Choose your next step</strong><small>Free messages first, then an optional ₹99 session.</small></div></div>
+            <div className="mihir-disclaimer">Astrology and palmistry are cultural and reflective practices, not guaranteed predictions or substitutes for professional medical, legal or financial advice.</div>
+          </aside>
+        </div>
+        <footer className="mihir-footer"><span>✦</span> THE VEDIC ASTRO <span>·</span> Explore with an open mind</footer>
+      </div>
     </main>
   );
 }
