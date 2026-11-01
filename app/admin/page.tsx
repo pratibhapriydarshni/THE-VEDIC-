@@ -127,6 +127,25 @@ export default function AdminManagement() {
   const [tab, setTab] = useState<Tab>('dashboard');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
+async function testWhatsAppConnection() {
+  setMessage('Checking WhatsApp connection...');
+  try {
+    const accessToken = await token();
+    if (!accessToken) throw new Error('Please login with your admin account.');
+
+    const response = await fetch('/api/admin/whatsapp-diagnostic', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: 'no-store',
+    });
+
+    const data = await response.json().catch(() => ({}));
+    setMessage(JSON.stringify(data, null, 2));
+  } catch (error) {
+    setMessage(
+      error instanceof Error ? error.message : 'WhatsApp diagnostic failed.'
+    );
+  }
+}
   const [summary, setSummary] = useState<Summary | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -513,14 +532,18 @@ async function openBookingFile(fileId: string) {
         </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={loadAll} style={buttonStyle}>
-            Refresh
-          </button>
+  <button onClick={loadAll} style={buttonStyle}>
+    Refresh
+  </button>
 
-          <button onClick={logout} style={buttonStyle}>
-            Logout
-          </button>
-        </div>
+  <button onClick={testWhatsAppConnection} style={buttonStyle}>
+    Test WhatsApp Connection
+  </button>
+
+  <button onClick={logout} style={buttonStyle}>
+    Logout
+  </button>
+</div>
       </header>
 
       <div
