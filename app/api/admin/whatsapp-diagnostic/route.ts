@@ -6,18 +6,18 @@ export async function GET(req: Request) {
     await requireAdmin(req);
 
     const token = requireEnv('WHATSAPP_ACCESS_TOKEN');
-    const businessAccountId = '2250029715396630';
+  const phoneId = '1439768252546495';
 
-    const response = await fetch(
-      `https://graph.facebook.com/v23.0/${businessAccountId}/phone_numbers?fields=id,display_phone_number,verified_name`,
-      {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        cache: 'no-store',
-      }
-    );
+const response = await fetch(
+  `https://graph.facebook.com/v23.0/${phoneId}?fields=display_phone_number,verified_name`,
+  {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    cache: 'no-store',
+  }
+);
 
     const result = await response.json();
 
